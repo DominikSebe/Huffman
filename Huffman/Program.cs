@@ -10,6 +10,23 @@ namespace Huffman
     {
         static void Main(string[] args)
         {
+            VariedLengthBinary v = 0b0010_0001_1000_1000;
+            VariedLengthBinary v2 = 0b1110_0010;
+            VariedLengthBinary v3 = v | v2;
+
+            Console.WriteLine(v.ToString());
+            Console.WriteLine(v.Value);
+            Console.WriteLine(v.BitLength);
+            Console.WriteLine("-----------");
+            Console.WriteLine(v2.ToString());
+            Console.WriteLine(v2.Value);
+            Console.WriteLine(v2.BitLength);
+            Console.WriteLine("-----------");
+            Console.WriteLine(v3.ToString());
+            Console.WriteLine(v3.Value);
+            Console.WriteLine(v3.BitLength);
+
+            Console.ReadKey();
         }
     }
 }
