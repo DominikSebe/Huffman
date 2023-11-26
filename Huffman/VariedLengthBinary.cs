@@ -106,6 +106,62 @@ namespace Huffman
             return binary.Bytes.Select((b, i) => (int)(b << i*8)).ToArray().Sum();
         }
         /// <summary>
+        /// Implementation of the bitwise left-shift operation for the VariedLengthBinary class.
+        /// Moves each stored bit left by the specified amount.
+        /// </summary>
+        /// <param name="binary">The VariedLengthBinary object used for the shifting operation.</param>
+        /// <param name="shift">The amount by which to shift the bits left.</param>
+        /// <returns>A new VariedLengthBinary object with the shifted bits.</returns>
+        public static VariedLengthBinary operator <<(VariedLengthBinary binary, int shift)
+        {
+            int reqBytes = (binary.BitLength + shift) / 8 + ((binary.BitLength + shift) % 8 > 0 ? 1 : 0);
+            int byteShift = shift / 8, bitShift = shift % 8;
+            byte[] bytes = new byte[reqBytes];
+
+            //for (int i = 0; i < binary.bytes.Length; i++)
+            //    bytes[i + byteShift] = binary.bytes[i];
+            //
+            //for (int i = bytes.Length - 1; i >= byteShift; i--)
+            //{
+            //    bytes[i] = (byte)((bytes[i] << bitShift) | (bytes[i - 1] >> (8 - bitShift)));
+            //}
+
+            int i = reqBytes - 1;
+            bytes[i] = (byte)(binary.Bytes[i - byteShift - 1] >> (8 - bitShift));
+
+            i--;
+            for (; i - byteShift - 1 >= 0; i--)
+                bytes[i] = (byte)((binary.Bytes[i - byteShift] << bitShift) | (binary.Bytes[i - byteShift - 1] >> (8 - bitShift)));
+                
+
+            bytes[i] = (byte)(binary.Bytes[i - byteShift] << bitShift);
+
+            return new VariedLengthBinary(bytes);
+
+        }
+        /// <summary>
+        /// Implementation of the bitwise right-shift operation for the VariedLengthBinary class.
+        /// Moves each stored bit right by the specified amount.
+        /// </summary>
+        /// <param name="binary">The VariedLengthBinary object used for the shifting operation.</param>
+        /// <param name="shift">The amount by which to shift the bits right.</param>
+        /// <returns></returns>
+        public static VariedLengthBinary operator >>(VariedLengthBinary binary, int shift)
+        {
+            int reqBytes = (binary.BitLength - shift) / 8 + ((binary.BitLength - shift) % 8 > 0 ? 1 : 0);
+            int byteshift = shift / 8, bitShift = shift % 8;
+            byte[] bytes = new byte[reqBytes];
+
+            int i = 0;
+            for (; i + byteshift + 1 < binary.Bytes.Length; i++)
+                bytes[i] = (byte)((binary.Bytes[i + byteshift] >> bitShift) | binary.Bytes[i + byteshift + 1] << (8 - bitShift));
+
+            bytes[i] = (byte)(binary.Bytes[i + byteshift] >> bitShift);
+
+            return new VariedLengthBinary(bytes);
+
+        }
+        /// <summary>
         /// Implementation of the bitwise AND operator for the VariedLengthBinary class.
         /// Computes the value of the AND operation for each of the corresponding bits for two VariedLengthBinary objects.
         /// </summary>
