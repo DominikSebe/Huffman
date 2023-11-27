@@ -63,11 +63,11 @@ namespace Huffman
         /// <param name="value">An integer value to convert to binary.</param>
         public VariedLengthBinary(int value)
         {
-            int bitLength = (int)Math.Log(value, 2);
-            this.bytes = new byte[bitLength];
-            for (int i = 0; i < bitLength; i++)
+            int byteLength = Math.Max((int)Math.Ceiling(Math.Log(value, 2) / 8), 1);
+            this.bytes = new byte[byteLength];
+            for (int i = 0; i < byteLength; i++)
             {
-                this.bytes[i] = Convert.ToByte(value & 0b1111_1111 << i * 8);
+                bytes[i] = Convert.ToByte(value >> i * 8 & 0b1111_1111);
             }
         }
         /// <summary>
@@ -89,7 +89,7 @@ namespace Huffman
         /// <param name="value">The integer valued to convert.</param>
         public static implicit operator VariedLengthBinary(int value)
         {
-            int byteLength = (int)Math.Ceiling(Math.Log(value, 2) / 8);
+            int byteLength = Math.Max((int)Math.Ceiling(Math.Log(value, 2) / 8), 1);
             byte[] bytes = new byte[byteLength];
             for (int i = 0;  i < byteLength; i++) {
                 bytes[i] = Convert.ToByte(value >> i * 8 & 0b1111_1111);
@@ -114,22 +114,20 @@ namespace Huffman
         /// <returns>A new VariedLengthBinary object with the shifted bits.</returns>
         public static VariedLengthBinary operator <<(VariedLengthBinary binary, int shift)
         {
+            if (shift == 0) return binary;
+
             int reqBytes = (binary.BitLength + shift) / 8 + ((binary.BitLength + shift) % 8 > 0 ? 1 : 0);
             int byteShift = shift / 8, bitShift = shift % 8;
             byte[] bytes = new byte[reqBytes];
 
-            //for (int i = 0; i < binary.bytes.Length; i++)
-            //    bytes[i + byteShift] = binary.bytes[i];
-            //
-            //for (int i = bytes.Length - 1; i >= byteShift; i--)
-            //{
-            //    bytes[i] = (byte)((bytes[i] << bitShift) | (bytes[i - 1] >> (8 - bitShift)));
-            //}
-
             int i = reqBytes - 1;
-            bytes[i] = (byte)(binary.Bytes[i - byteShift - 1] >> (8 - bitShift));
 
-            i--;
+            if (byteShift > 0)
+            {
+                bytes[i] = (byte)(binary.Bytes[i - byteShift - 1] >> (8 - bitShift));
+                i--;
+            }
+
             for (; i - byteShift - 1 >= 0; i--)
                 bytes[i] = (byte)((binary.Bytes[i - byteShift] << bitShift) | (binary.Bytes[i - byteShift - 1] >> (8 - bitShift)));
                 
@@ -148,6 +146,8 @@ namespace Huffman
         /// <returns></returns>
         public static VariedLengthBinary operator >>(VariedLengthBinary binary, int shift)
         {
+            if (shift == 0) return binary;
+
             int reqBytes = (binary.BitLength - shift) / 8 + ((binary.BitLength - shift) % 8 > 0 ? 1 : 0);
             int byteshift = shift / 8, bitShift = shift % 8;
             byte[] bytes = new byte[reqBytes];
