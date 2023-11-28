@@ -6,46 +6,8 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace Huffman
-{
-    struct Occurance : IComparable
+{    internal class Program
     {
-        private char key;
-        private int value;
-
-        public char Key
-        {
-            get { return key; }
-            set { this.key = value; }
-        }
-        public int Value
-        {
-            get { return this.value; }
-            set { this.value = value; }
-        }
-
-        public Occurance(char key, int value)
-        {
-            this.key = key;
-            this.value = value;
-        }
-
-        int IComparable.CompareTo(object obj)
-        {
-            Occurance other = (Occurance)obj;
-            if (this.value < other.Value) return -1;
-            else if (this.value == other.Value) return 0;
-            else return 1;
-        }
-
-        public override string ToString()
-        {
-            return String.Format("{{\"{0}\":\"{1}\"}}", this.key, this.value);
-        }
-    }
-
-    internal class Program
-    {
-        
         static void Main(string[] args)
         {
             string test = "This is a string for tesing the Huffman algorythm.";
@@ -58,7 +20,7 @@ namespace Huffman
             }
 
             PriorityQueue<HuffmanTree> priorityQueue = new PriorityQueue<HuffmanTree>(freq.Select(item => new HuffmanTree(item.Key, item.Value)).ToArray());
-            
+
             HuffmanTree huffmanTree = BuildTree(priorityQueue);
 
             List<VariedLengthBinary> codes = new List<VariedLengthBinary>();
@@ -66,30 +28,59 @@ namespace Huffman
             foreach (char key in test)
             {
                 HuffmanTree item = HuffmanTree.Find(huffmanTree, t => t.Key == key);
-                List<int> bins = new List<int>();
-                while(item.Parent != null)
+                byte b_code = 0b0;
+                int counter = 0;
+
+                while (item.Parent != null)
                 {
-                    if (item.Parent.Right == item) bins.Add(1);
-                    else bins.Add(0);
+                    if (item.Parent.Right == item) b_code |= (byte)(0b1 << counter);
                     item = item.Parent;
+                    counter++;
                 }
 
-                bins.Reverse();
+                codes.Add(new VariedLengthBinary(b_code, counter));
+            }
 
-                int i = 0;
-                VariedLengthBinary code = 0;
-                foreach (int bin in bins)
-                {
-                    if (bin == 1) code = code | new VariedLengthBinary(0b1 << i);
-                    i++;
-                }
-                codes.Add(code);
+            VariedLengthBinary totalCode = new VariedLengthBinary(0, 0);
+
+            totalCode |= codes.ElementAt(0);
+
+            for (int i = 1; i < codes.Count(); i++)
+            {
+                VariedLengthBinary code = codes.ElementAt(i);
+                totalCode <<= code.BitLength;
+                totalCode |= code;
             }
 
             foreach (VariedLengthBinary code in codes)
+                Console.Write("{0} ", code);
+
+            Console.WriteLine();
+            Console.WriteLine(new String('-', totalCode.BitLength));
+            Console.WriteLine(totalCode.ToString());
+
+
+
+            string decoded = "";
+
+            while (totalCode.BitLength > 0)
             {
-                Console.WriteLine(code.ToString());
+                HuffmanTree leaf = HuffmanTree.FindCode(huffmanTree, totalCode);
+                if (leaf != null)
+                {
+                    decoded += leaf.Key;
+
+                    int depth = 0;
+                    while (leaf.Parent != null) { leaf = leaf.Parent; depth++; }
+
+                    byte h = 0b0;
+                    for (int i = 0; i < depth; i++) h |= (byte)(0b1 << i);
+
+                    totalCode &= ~(new VariedLengthBinary(h, 0) << (totalCode.BitLength - depth));
+                }
             }
+            Console.WriteLine("------------------------------------------");
+            Console.WriteLine(decoded);
 
 
             Console.ReadKey();
@@ -102,7 +93,7 @@ namespace Huffman
             {
                 HuffmanTree t1 = priorityQueue.PopTop(), t2 = priorityQueue.PopTop();
                 HuffmanTree newInner = new HuffmanTree('\0', t1.Value + t2.Value);
-                
+
                 newInner.Left = t1; t1.Parent = newInner;
                 newInner.Right = t2; t2.Parent = newInner;
 
@@ -110,6 +101,6 @@ namespace Huffman
             }
 
             return priorityQueue.PopTop();
-        } 
+        }
     }
 }

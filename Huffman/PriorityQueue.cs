@@ -28,7 +28,7 @@ namespace Huffman
             this._items = new T[0];
             this.ascending = ascending;
         }
-        public PriorityQueue(T[] items, bool ascending = true): this(ascending)
+        public PriorityQueue(T[] items, bool ascending = true) : this(ascending)
         {
             foreach (T item in items) Insert(item);
         }
@@ -52,7 +52,7 @@ namespace Huffman
 
         #region Methods
         #region Static
-        
+
         #endregion
 
         #region Non-Static
@@ -81,7 +81,7 @@ namespace Huffman
                     this._items[prior] = tmp;
                 }
             }
-            else if(left < this._items.Length)
+            else if (left < this._items.Length)
             {
                 if ((this.ascending ? Comparer<T>.Default.Compare(this._items[i], this._items[left]) : Comparer<T>.Default.Compare(this._items[left], this._items[i])) >= 0)
                 {
@@ -89,7 +89,7 @@ namespace Huffman
                     this._items[left] = tmp;
                 }
             }
-            else if(right < this._items.Length)
+            else if (right < this._items.Length)
             {
                 if ((this.ascending ? Comparer<T>.Default.Compare(this._items[i], this._items[right]) : Comparer<T>.Default.Compare(this._items[right], this._items[i])) >= 0)
                 {
@@ -107,7 +107,7 @@ namespace Huffman
         public void Increase(T item, T key)
         {
             int i = 0;
-            while (i< this._items.Length && Comparer<T>.Default.Compare(this._items[i], item) != 0) i++;
+            while (i < this._items.Length && Comparer<T>.Default.Compare(this._items[i], item) != 0) i++;
 
             if (i < this._items.Length && (this.ascending ? Comparer<T>.Default.Compare(key, item) : Comparer<T>.Default.Compare(item, key)) >= 0)
             {
@@ -126,7 +126,7 @@ namespace Huffman
             if (left < this._items.Length)
                 Map(func, left);
 
-            if(right < this._items.Length)
+            if (right < this._items.Length)
                 Map(func, right);
         }
         #endregion
@@ -148,7 +148,7 @@ namespace Huffman
         {
             T top = this._items[0];
 
-            if (this._items.Length > 1) 
+            if (this._items.Length > 1)
                 this._items[0] = this._items[this._items.Length - 1];
 
             Array.Resize(ref this._items, this._items.Length - 1);

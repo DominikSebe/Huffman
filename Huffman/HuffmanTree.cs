@@ -15,16 +15,16 @@ namespace Huffman
         private char key;
         private int value;
 
-        public int Key 
-        { 
+        public char Key
+        {
             get { return this.key; }
         }
-        public int Value 
-        { 
+        public int Value
+        {
             get { return this.value; }
         }
-        public HuffmanTree Parent 
-        { 
+        public HuffmanTree Parent
+        {
             get { return this.parent; }
             set { this.parent = value; }
         }
@@ -49,7 +49,7 @@ namespace Huffman
         {
             HuffmanTree left = null, right = null;
             if (root == null || func.Invoke(root)) return root;
-            else 
+            else
             {
                 if (root.Left != null)
                 {
@@ -64,19 +64,30 @@ namespace Huffman
             return right;
 
         }
+        public static HuffmanTree FindCode(HuffmanTree root, VariedLengthBinary code)
+        {
+            if (root == null || root.Key != '\0') return root;
+            else
+            {
+                if (code[code.BitLength - 1])
+                    return FindCode(root.Right, code & ~(new VariedLengthBinary(1, 0) << (code.BitLength - 1)));
+                else
+                    return FindCode(root.Left, code & ~(new VariedLengthBinary(1, 0) << (code.BitLength - 1)));
+            }
+        }
         public static void Map(HuffmanTree tree, Process func)
         {
-            if(tree != null)
+            if (tree != null)
             {
-                if(tree.Left != null) Map(tree.Left, func);
+                if (tree.Left != null) Map(tree.Left, func);
                 func.Invoke(tree);
-                if(tree.Right != null) Map(tree.Right, func);
+                if (tree.Right != null) Map(tree.Right, func);
             }
         }
 
         public int CompareTo(object obj)
         {
-            if (this.value < (obj as HuffmanTree).Value) return - 1;
+            if (this.value < (obj as HuffmanTree).Value) return -1;
             else if (this.value == (obj as HuffmanTree).Value) return 0;
             else return 1;
         }

@@ -14,6 +14,7 @@ namespace Huffman
     {
         #region Members
         private byte[] bytes;
+        private int bitLength;
         #endregion
 
         #region Properties
@@ -30,8 +31,8 @@ namespace Huffman
         /// <summary>
         /// Gets a copy of the stored bytes.
         /// </summary>
-        public byte[] Bytes 
-        { 
+        public byte[] Bytes
+        {
             get { return this.bytes.Clone() as byte[]; }
         }
         /// <summary>
@@ -39,12 +40,12 @@ namespace Huffman
         /// </summary>
         public int Value
         {
-            get{ return this; }
+            get { return this; }
         }
         /// <summary>
         /// Gets the index of the most significant bit (the largest bit with a value of 1).
         /// </summary>
-        public int BitLength
+        public int MostSignificantBit
         {
             get
             {
@@ -54,6 +55,10 @@ namespace Huffman
                 return (this.bytes.Length - 1) * 8 + i + 1;
             }
         }
+        public int BitLength
+        {
+            get { return this.bitLength; }
+        }
         #endregion
 
         #region Constructors
@@ -61,7 +66,7 @@ namespace Huffman
         /// Initializes a new VariedLengthBinary object.
         /// </summary>
         /// <param name="value">An integer value to convert to binary.</param>
-        public VariedLengthBinary(int value)
+        public VariedLengthBinary(int value, int bitLength = -1)
         {
             int byteLength = Math.Max((int)Math.Ceiling(Math.Log(value, 2) / 8), 1);
             this.bytes = new byte[byteLength];
@@ -69,14 +74,16 @@ namespace Huffman
             {
                 bytes[i] = Convert.ToByte(value >> i * 8 & 0b1111_1111);
             }
+            this.bitLength = bitLength;
         }
         /// <summary>
         /// Initializes a new VariedLengthBinary object.
         /// </summary>
         /// <param name="bytes">An array of bytes used to build the object.</param>
-        public VariedLengthBinary(params byte[] bytes)
+        public VariedLengthBinary(byte[] bytes, int bitLength = 0)
         {
             this.bytes = bytes;
+            this.bitLength = bitLength;
         }
         #endregion
 
@@ -91,7 +98,8 @@ namespace Huffman
         {
             int byteLength = Math.Max((int)Math.Ceiling(Math.Log(value, 2) / 8), 1);
             byte[] bytes = new byte[byteLength];
-            for (int i = 0;  i < byteLength; i++) {
+            for (int i = 0; i < byteLength; i++)
+            {
                 bytes[i] = Convert.ToByte(value >> i * 8 & 0b1111_1111);
             }
 
@@ -103,7 +111,7 @@ namespace Huffman
         /// <param name="binary">The VariedLengthBinary object to convert.</param>
         public static implicit operator int(VariedLengthBinary binary)
         {
-            return binary.Bytes.Select((b, i) => (int)(b << i*8)).ToArray().Sum();
+            return binary.Bytes.Select((b, i) => (int)(b << i * 8)).ToArray().Sum();
         }
         /// <summary>
         /// Implementation of the bitwise left-shift operation for the VariedLengthBinary class.
@@ -116,25 +124,20 @@ namespace Huffman
         {
             if (shift == 0) return binary;
 
-            int reqBytes = (binary.BitLength + shift) / 8 + ((binary.BitLength + shift) % 8 > 0 ? 1 : 0);
+            int reqBytes = (binary.MostSignificantBit + shift) / 8 + ((binary.MostSignificantBit + shift) % 8 > 0 ? 1 : 0);
             int byteShift = shift / 8, bitShift = shift % 8;
             byte[] bytes = new byte[reqBytes];
 
-            int i = reqBytes - 1;
+            int i;
 
-            if (byteShift > 0)
-            {
-                bytes[i] = (byte)(binary.Bytes[i - byteShift - 1] >> (8 - bitShift));
-                i--;
-            }
+            for (i = reqBytes - 1; i - byteShift - 1 >= 0; i--)
+                bytes[i] =
+                    (byte)((i - byteShift < binary.Bytes.Length ? (binary.Bytes[i - byteShift] << bitShift) : 0b0) | (binary.Bytes[i - byteShift - 1] >> (8 - bitShift)));
 
-            for (; i - byteShift - 1 >= 0; i--)
-                bytes[i] = (byte)((binary.Bytes[i - byteShift] << bitShift) | (binary.Bytes[i - byteShift - 1] >> (8 - bitShift)));
-                
 
-            bytes[i] = (byte)(binary.Bytes[i - byteShift] << bitShift);
+            bytes[i] = (byte)(binary.Bytes[((i - byteShift >= 0) ? i - byteShift : reqBytes - byteShift)] << bitShift);
 
-            return new VariedLengthBinary(bytes);
+            return new VariedLengthBinary(bytes, binary.BitLength + shift);
 
         }
         /// <summary>
@@ -148,7 +151,7 @@ namespace Huffman
         {
             if (shift == 0) return binary;
 
-            int reqBytes = (binary.BitLength - shift) / 8 + ((binary.BitLength - shift) % 8 > 0 ? 1 : 0);
+            int reqBytes = (binary.MostSignificantBit - shift) / 8 + ((binary.MostSignificantBit - shift) % 8 > 0 ? 1 : 0);
             int byteshift = shift / 8, bitShift = shift % 8;
             byte[] bytes = new byte[reqBytes];
 
@@ -158,8 +161,16 @@ namespace Huffman
 
             bytes[i] = (byte)(binary.Bytes[i + byteshift] >> bitShift);
 
-            return new VariedLengthBinary(bytes);
+            return new VariedLengthBinary(bytes, binary.BitLength - shift);
 
+        }
+        public static VariedLengthBinary operator ~(VariedLengthBinary binary)
+        {
+            byte[] bytes = binary.Bytes;
+            for (int i = 0; i < bytes.Length; i++)
+                bytes[i] = (byte)~bytes[i];
+
+            return new VariedLengthBinary(bytes, binary.BitLength);
         }
         /// <summary>
         /// Implementation of the bitwise AND operator for the VariedLengthBinary class.
@@ -172,7 +183,8 @@ namespace Huffman
         {
             byte[] bytes_less, bytes_more, bytes;
 
-            if (a.BitLength <= b.BitLength) {
+            if (a.bytes.Length <= b.bytes.Length)
+            {
                 bytes_less = a.bytes;
                 bytes_more = b.bytes;
             }
@@ -187,7 +199,7 @@ namespace Huffman
             for (int i = 0; i < bytes.Length; i++)
                 bytes[i] = Convert.ToByte(bytes_less[i] & bytes_more[i]);
 
-            return new VariedLengthBinary(bytes);
+            return new VariedLengthBinary(bytes, Math.Min(a.BitLength, b.BitLength));
         }
         /// <summary>
         /// Implementation of the bitwise OR operator for the VariedLengthBinary class.
@@ -200,7 +212,7 @@ namespace Huffman
         {
             byte[] bytes_less, bytes_more, bytes;
 
-            if (a.BitLength <= b.BitLength)
+            if (a.MostSignificantBit <= b.MostSignificantBit)
             {
                 bytes_less = a.bytes;
                 bytes_more = b.bytes;
@@ -214,7 +226,7 @@ namespace Huffman
             int i;
             bytes = new byte[bytes_more.Length];
 
-            
+
             for (i = 0; i < bytes_less.Length; i++)
                 bytes[i] = Convert.ToByte(bytes_less[i] | bytes_more[i]);
 
@@ -223,7 +235,7 @@ namespace Huffman
                 bytes[i] = bytes_more[i];
             }
 
-            return new VariedLengthBinary(bytes);
+            return new VariedLengthBinary(bytes, Math.Max(a.BitLength, b.BitLength));
         }
         #endregion
 
