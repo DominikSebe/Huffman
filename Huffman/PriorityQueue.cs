@@ -169,7 +169,7 @@ namespace Huffman
         private void Resize(int size)
         {
             // If the size is less than zero, throw and Exception
-            if (size < 0) throw new ArgumentOutOfRangeException("size", "Cannot create an array with a negative size.");
+            if (size < 0) throw new ArgumentOutOfRangeException(nameof(size), "Cannot create an array with a negative size.");
             // Action is only required, when the new size differs from the current
             if (size != this._items.Length)
             {
@@ -200,7 +200,7 @@ namespace Huffman
         /// <exception cref="ArgumentException">Thrown when the item is equal to an already stored element of the queue.</exception>
         public void Push(T item)
         {
-            if (this._items.Contains(item)) throw new ArgumentException("Element is already contained within queue.", "item");
+            if (this._items.Contains(item)) throw new ArgumentException("Element is already contained within queue.", nameof(item));
 
             this.Resize(this._items.Length + 1); // Increase the array of elements
             this._items[this._items.Length - 1] = item; // Set last index to the element
@@ -217,20 +217,20 @@ namespace Huffman
         /// - The element to be incremented is not part of the queue.</exception>
         public void Increment(T original, T replacement)
         {
-            if (this._comparer(replacement, original) < 0) throw new ArgumentException("The replacement must equal or greater", "replacement");
+            if (this._comparer(replacement, original) < 0) throw new ArgumentException("The replacement must equal or greater", nameof(replacement));
 
             int i = 0;
 
             if (this._comparer(original, replacement) != 0)
             {
                 while (i < this._items.Length && this._comparer(this._items[i], replacement) != 0) i++;
-                if (i < this._items.Length) throw new ArgumentException("Elements ia alredy contained within queue.", "replacement");
+                if (i < this._items.Length) throw new ArgumentException("Elements ia alredy contained within queue.", nameof(replacement));
             }
 
             i = 0;
             while (i < this._items.Length && this._comparer(this._items[i], original) != 0) i++;
 
-            if (i >= this._items.Length) throw new ArgumentException("The element is not part of the queue", "original");
+            if (i >= this._items.Length) throw new ArgumentException("The element is not part of the queue", nameof(original));
 
             this._items[i] = replacement;
             this.Order(this._items.Length - 1);
