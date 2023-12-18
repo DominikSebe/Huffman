@@ -8,39 +8,40 @@ using System.Threading.Tasks;
 namespace Huffman
 {
     /// <summary>
-    /// Represents a binary value of variable bit-length.
+    /// Represents a binary number of varying amount of bits.
     /// </summary>
-    internal class VariedLengthBinary
+    public class VariedLengthBinary
     {
         #region Members
-        private byte[] bytes;
-        private int bitLength;
+        private byte[] _bytes;
+        private int _bitLength;
         #endregion
 
         #region Properties
-        /// <summary>
-        /// Gets the value of the bit stored at the index.
-        /// </summary>
-        /// <param name="index">A 0 based index of the bit to get.</param>
-        /// <returns>True if the bit is 1, False if 0.</returns>
-        /// <exception cref="IndexOutOfRangeException">Thrown if the index points outside of the array of bits.</exception>
-        public bool this[int index]
+        public int BitLength
         {
-            get { return Convert.ToBoolean(this.bytes[index / 8] & 0b1 << index % 8); }
+            get { return this._bitLength; }
         }
         /// <summary>
-        /// Gets a copy of the stored bytes.
+        /// Get a copy of the stored bytes of the binary.
         /// </summary>
         public byte[] Bytes
         {
-            get { return this.bytes.Clone() as byte[]; }
+            get { return this._bytes.Clone() as byte[]; }
         }
         /// <summary>
-        /// Gets the integer value of the stored bits.
+        /// Get the value of the bit stored at the index.
         /// </summary>
-        public int Value
+        /// <param name="index">A 0 based index of the bit.</param>
+        /// <returns>True if the bit is 1, False if 0.</returns>
+        /// <exception cref="IndexOutOfRangeException">Thrown when index is less than zero or equal to or greater than the length of bits.</exception>
+        public bool this[int index]
         {
-            get { return this; }
+            get
+            {
+                if (index < 0 || index >= this._bitLength) throw new IndexOutOfRangeException("Index pointed outside of the bits.");
+                return Convert.ToBoolean(this._bytes[index / 8] & (0b1 << (index % 8)));
+            }
         }
         /// <summary>
         /// Gets the index of the most significant bit (the largest bit with a value of 1).
@@ -50,68 +51,78 @@ namespace Huffman
             get
             {
                 int i = 7;
-                while (i >= 0 && (this.bytes[this.bytes.Length - 1] & 0b1 << i) < 1) i--;
+                while (i >= 0 && (this._bytes[this._bytes.Length - 1] & 0b1 << i) < 1) i--;
 
-                return (this.bytes.Length - 1) * 8 + i + 1;
+                return (this._bytes.Length - 1) * 8 + i + 1;
             }
-        }
-        public int BitLength
-        {
-            get { return this.bitLength; }
         }
         #endregion
 
         #region Constructors
-        /// <summary>
-        /// Initializes a new VariedLengthBinary object.
-        /// </summary>
-        /// <param name="value">An integer value to convert to binary.</param>
-        public VariedLengthBinary(int value, int bitLength = -1)
+        private VariedLengthBinary(byte[] bytes, int bitLength): this(bitLength)
         {
-            int byteLength = Math.Max((int)Math.Ceiling(Math.Log(value, 2) / 8), 1);
-            this.bytes = new byte[byteLength];
-            for (int i = 0; i < byteLength; i++)
-            {
-                bytes[i] = Convert.ToByte(value >> i * 8 & 0b1111_1111);
-            }
-            this.bitLength = bitLength;
+            this._bytes = bytes;
+        }
+        /// <summary>
+        /// Initializes a new VariedLengthBinary of specified number of bits.
+        /// </summary>
+        /// <param name="bitLength"></param>
+        public VariedLengthBinary(int bitLength)
+        {
+            if (bitLength < 1) throw new ArgumentOutOfRangeException(nameof(bitLength), "Number of bits must be one or greater.");
+            this._bitLength = bitLength;
+            this._bytes = new byte[(int)Math.Ceiling(bitLength / 8.0)];
         }
         /// <summary>
         /// Initializes a new VariedLengthBinary object.
         /// </summary>
-        /// <param name="bytes">An array of bytes used to build the object.</param>
-        public VariedLengthBinary(byte[] bytes, int bitLength = 0)
+        /// <param name="bytes">An array of _bytes used to build the object.</param>
+        public VariedLengthBinary(byte[] bytes)
         {
-            this.bytes = bytes;
-            this.bitLength = bitLength;
+            this._bitLength += bytes.Length * 8;
+            this._bytes = bytes;
         }
         #endregion
 
         #region Functions
-
         #region Static
         /// <summary>
-        /// Implicitly converts an integer value to a VariedLengthbinary object.
+        /// Convert an integer value to a VariedLengthBinary object.
         /// </summary>
-        /// <param name="value">The integer valued to convert.</param>
+        /// <param name="value">The integer value to convert.</param>
         public static implicit operator VariedLengthBinary(int value)
         {
-            int byteLength = Math.Max((int)Math.Ceiling(Math.Log(value, 2) / 8), 1);
-            byte[] bytes = new byte[byteLength];
-            for (int i = 0; i < byteLength; i++)
+            byte[] bytes;
+            int bitLength;
+
+            if (value < 0) throw new ArgumentException("Value must be positive", nameof(value));
+            else if (value == 0) bitLength = 1;
+            else bitLength = (int)Math.Log(value, 2) + 1;
+
+            if (value < 256)
+                bytes = new byte[1] { (byte)value };
+            else
             {
-                bytes[i] = Convert.ToByte(value >> i * 8 & 0b1111_1111);
+                bytes = new byte[bitLength / 8 + Convert.ToInt32(bitLength % 8 > 0)];
+                for (int i = 0; i < bytes.Length; i++)
+                    bytes[i] = (byte)(value >> i * 8 & 0b1111_1111);
             }
 
-            return new VariedLengthBinary(bytes);
+            return new VariedLengthBinary(bytes, bitLength);
         }
+        public static explicit operator VariedLengthBinary(char key) => (int)key;
+        public static explicit operator VariedLengthBinary(byte value) => (int)value;
         /// <summary>
-        /// Implicitly convert a VariedLengthBinary object to an integer value.
+        /// Convert a VariedLengthBinary object to an integer value.
         /// </summary>
         /// <param name="binary">The VariedLengthBinary object to convert.</param>
-        public static implicit operator int(VariedLengthBinary binary)
+        public static explicit operator int(VariedLengthBinary binary)
         {
             return binary.Bytes.Select((b, i) => (int)(b << i * 8)).ToArray().Sum();
+        }
+        public static explicit operator string(VariedLengthBinary binary)
+        {
+            return binary.ToString();
         }
         /// <summary>
         /// Implementation of the bitwise left-shift operation for the VariedLengthBinary class.
@@ -122,23 +133,32 @@ namespace Huffman
         /// <returns>A new VariedLengthBinary object with the shifted bits.</returns>
         public static VariedLengthBinary operator <<(VariedLengthBinary binary, int shift)
         {
-            if (shift == 0) return binary;
+            // 0b0000_1000 0000_0010 << 1     => 0b0001_0000 0000_0100
+            // 0b0000_1000 0000_0010 << 5     => 0b0000_0001 0000_0000 0100_0000
+            // 0b0000_1000 0000_0010 << 8     => 0b0000_1000 0000_0010 0000_0000
+            // 0b0000_1000 0000_0010 << 12    => 0b1000_0000 0010_0000 0000_0000
+            // 0b0000_1000 0000_0010 << 15    => 0b0000_0100 0000_0001 0000_0000 0000_0000
 
-            int reqBytes = (binary.MostSignificantBit + shift) / 8 + ((binary.MostSignificantBit + shift) % 8 > 0 ? 1 : 0);
-            int byteShift = shift / 8, bitShift = shift % 8;
-            byte[] bytes = new byte[reqBytes];
+            int byteShift = shift / 8, bitShift = shift % 8; bool extraShift = (binary.BitLength - 1) % 8 + bitShift >= 8;
+            int bitLength = binary.BitLength + shift, byteLength = bitLength / 8 + Convert.ToInt32(bitLength % 8 > 0);
 
-            int i;
+            byte[] bytes = new byte[byteLength];
 
-            for (i = reqBytes - 1; i - byteShift - 1 >= 0; i--)
-                bytes[i] =
-                    (byte)((i - byteShift < binary.Bytes.Length ? (binary.Bytes[i - byteShift] << bitShift) : 0b0) | (binary.Bytes[i - byteShift - 1] >> (8 - bitShift)));
+            int i = byteLength - 1;
+
+            if(extraShift)
+            {
+                bytes[i] = (byte)(binary.Bytes[i - byteShift - 1] >> (8 - bitShift));
+                i--;
+            }
+
+            for (; i > byteShift; i--)
+                bytes[i] = (byte)(binary.Bytes[i - byteShift] << bitShift | binary.Bytes[i - byteShift - 1] >> (8 - bitShift));
 
 
-            bytes[i] = (byte)(binary.Bytes[((i - byteShift >= 0) ? i - byteShift : reqBytes - byteShift)] << bitShift);
+            bytes[i] = (byte)(binary.Bytes[i - byteShift] << bitShift);
 
-            return new VariedLengthBinary(bytes, binary.BitLength + shift);
-
+            return new VariedLengthBinary(bytes, bitLength);
         }
         /// <summary>
         /// Implementation of the bitwise right-shift operation for the VariedLengthBinary class.
@@ -149,17 +169,25 @@ namespace Huffman
         /// <returns></returns>
         public static VariedLengthBinary operator >>(VariedLengthBinary binary, int shift)
         {
+            // 0b0100_1000 0100_1000 1000_0010 >> 1     => 0b0010_0100 0010_0100 0100_0001
+            // 0b0100_1000 0100_1000 1000_0010 >> 7     => 0b1001_0000 1001_0001
+            // 0b0100_1000 0100_1000 1000_0010 >> 8     => 0b0100_1000 0100_1000
+            // 0b0100_1000 0100_1000 1000_0010 >> 12    => 0b0000_0100 1000_0100
+            // 0b0100_1000 0100_1000 1000_0010 >> 15    => 01001_0000
             if (shift == 0) return binary;
 
-            int reqBytes = (binary.MostSignificantBit - shift) / 8 + ((binary.MostSignificantBit - shift) % 8 > 0 ? 1 : 0);
-            int byteshift = shift / 8, bitShift = shift % 8;
-            byte[] bytes = new byte[reqBytes];
+            int byteshift = shift / 8, bitShift = shift % 8; bool extraShift = (binary.BitLength - 1) % 8 < bitShift;
+            int bitLength = binary.BitLength - shift, byteLength = bitLength / 8 + Convert.ToInt32(bitLength % 8 > 0);
+
+            byte[] bytes = new byte[byteLength];
 
             int i = 0;
-            for (; i + byteshift + 1 < binary.Bytes.Length; i++)
+            for (; i < bytes.Length - Convert.ToInt32(!extraShift); i++)
                 bytes[i] = (byte)((binary.Bytes[i + byteshift] >> bitShift) | binary.Bytes[i + byteshift + 1] << (8 - bitShift));
 
-            bytes[i] = (byte)(binary.Bytes[i + byteshift] >> bitShift);
+
+            if (!extraShift)
+                bytes[i] = (byte)(binary.Bytes[i + byteshift] >> bitShift);
 
             return new VariedLengthBinary(bytes, binary.BitLength - shift);
 
@@ -181,23 +209,12 @@ namespace Huffman
         /// <returns>A new VariedLengthBinary with results of the AND operations as its bits.</returns>
         public static VariedLengthBinary operator &(VariedLengthBinary a, VariedLengthBinary b)
         {
-            byte[] bytes_less, bytes_more, bytes;
+            int length = Math.Min(a.Bytes.Length, b.Bytes.Length);
+            byte[] bytes_a = a.Bytes, bytes_b = b._bytes, bytes = new byte[length];
 
-            if (a.bytes.Length <= b.bytes.Length)
-            {
-                bytes_less = a.bytes;
-                bytes_more = b.bytes;
-            }
-            else
-            {
-                bytes_less = b.bytes;
-                bytes_more = a.bytes;
-            }
-
-            bytes = new byte[bytes_less.Length];
 
             for (int i = 0; i < bytes.Length; i++)
-                bytes[i] = Convert.ToByte(bytes_less[i] & bytes_more[i]);
+                bytes[i] = Convert.ToByte(bytes_a[i] & bytes_b[i]);
 
             return new VariedLengthBinary(bytes, Math.Min(a.BitLength, b.BitLength));
         }
@@ -210,30 +227,25 @@ namespace Huffman
         /// <returns>A new VariedLengthBinary with results of the OR operations as its bits.</returns>
         public static VariedLengthBinary operator |(VariedLengthBinary a, VariedLengthBinary b)
         {
-            byte[] bytes_less, bytes_more, bytes;
+            int length = Math.Max(a.Bytes.Length, b.Bytes.Length);
+            byte[] bytes_lesser, bytes_greater, bytes = new byte[length];
 
-            if (a.MostSignificantBit <= b.MostSignificantBit)
+            if (a.BitLength <= b.BitLength)
             {
-                bytes_less = a.bytes;
-                bytes_more = b.bytes;
+                bytes_lesser = a.Bytes; bytes_greater = b.Bytes;
             }
             else
             {
-                bytes_less = b.bytes;
-                bytes_more = a.bytes;
+                bytes_lesser = b.Bytes; bytes_greater = a.Bytes;
             }
+            
 
-            int i;
-            bytes = new byte[bytes_more.Length];
-
-
-            for (i = 0; i < bytes_less.Length; i++)
-                bytes[i] = Convert.ToByte(bytes_less[i] | bytes_more[i]);
+            int i = 0;
+            for (; i < bytes_lesser.Length; i++)
+                bytes[i] = Convert.ToByte(bytes_lesser[i] | bytes_greater[i]);
 
             for (; i < bytes.Length; i++)
-            {
-                bytes[i] = bytes_more[i];
-            }
+                bytes[i] = bytes_greater[i];
 
             return new VariedLengthBinary(bytes, Math.Max(a.BitLength, b.BitLength));
         }
@@ -242,12 +254,12 @@ namespace Huffman
         #region Non-static
         /// <summary>
         /// Overriden implementation for the VariedLengthBinary class.
-        /// Converted the stored bytes to a string, reading from right to left.
+        /// Converted the stored _bytes to a string, reading from right to left.
         /// </summary>
-        /// <returns>A string version of the stored bytes.</returns>
+        /// <returns>A string version of the stored _bytes.</returns>
         public override string ToString()
         {
-            return string.Join(" ", bytes.Select(x => Convert.ToString(x, 2).PadLeft(8, '0')).ToArray().Reverse());
+            return string.Join(" ", _bytes.Select(x => Convert.ToString(x, 2).PadLeft(8, '0')).ToArray().Reverse());
         }
         #endregion
 
