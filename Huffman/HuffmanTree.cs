@@ -99,23 +99,6 @@ namespace Huffman
 
         }
         /// <summary>
-        /// Find an element by specifying which branch to search for each step.
-        /// </summary>
-        /// <param name="root">The element to start the search from.</param>
-        /// <param name="code">A VariedLengthBinary object to specify which branch to take at each step.</param>
-        /// <returns>The leaf element at the end of the steps.</returns>
-        public static HuffmanTree FindCode(HuffmanTree root, VariedLengthBinary code)
-        {
-            if (root == null || root.Key != '\0') return root;
-            else
-            {
-                if (code[code.BitLength - 1])
-                    return FindCode(root.Right, code & ~((VariedLengthBinary)1) << (code.BitLength - 1));
-                else
-                    return FindCode(root.Left, code & ~((VariedLengthBinary)1) << (code.BitLength - 1));
-            }
-        }
-        /// <summary>
         /// Invoke a function for each element in the tree in Depth-first LNR order.
         /// </summary>
         /// <param name="tree">The element to start traversing from.</param>
